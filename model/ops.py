@@ -8,7 +8,7 @@ class SelfAttention(nn.Module):
     def __init__(self, params):
         super(SelfAttention, self).__init__()
         self.hidden_dim = params.hidden_dim
-        self.attention_dim = params.hidden_dim // params.n_head
+        self.attention_dim = params.hidden_dim // params.num_heads
 
         self.q_w = nn.Linear(self.hidden_dim, self.attention_dim, bias=False)
         self.k_w = nn.Linear(self.hidden_dim, self.attention_dim, bias=False)
@@ -42,3 +42,7 @@ class SelfAttention(nn.Module):
 
 def gelu(x):
     return x * 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
+
+
+def get_attn_mask(x):
+    pass

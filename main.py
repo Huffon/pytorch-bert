@@ -1,16 +1,17 @@
+import json
 import argparse
 
 from trainer import Trainer
-from utils import load_data
+from utils import build_iter
 
 
 def main(params):
     if params.mode == 'train':
-        train_iter, valid_iter = load_data('train')
+        train_iter, valid_iter = build_iter(params, 'train')
         trainer = Trainer(params, train_iter=train_iter, valid_iter=valid_iter)
         trainer.train()
     else:
-        test_iter = load_data('test')
+        test_iter = build_iter(params, 'test')
         trainer = Trainer(params, test_iter=test_iter)
         trainer.test()
 
@@ -20,6 +21,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'test'])
     parser.add_argument('--num_epoch', type=int, default=3)
     parser.add_argument('--bsz', type=int, default=32)
+
     # Hyper-parameters
     parser.add_argument('--max_len', type=int, default=32)
     parser.add_argument('--max_pred', type=int, default=5)
@@ -28,6 +30,13 @@ if __name__ == '__main__':
     parser.add_argument('--num_segments', type=int, default=2)
     parser.add_argument('--hidden_dim', type=int, default=768)
     parser.add_argument('--ffn_dim', type=int, default=3072)
+    parser.add_argument('--dropout', type=float, default=0.1)
     
+    # Add pre-built vocab size to params
+    f_vocab = open('vocab.json')
+    vocab = json.load(f_vocab)
+    parser.add_argument('--vocab_size', type=int, default=len(vocab))
+    f_vocab.close()
+
     args = parser.parse_args()
     main(args)
