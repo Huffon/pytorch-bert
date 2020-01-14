@@ -41,6 +41,5 @@ if __name__ == '__main__':
     # Add device information
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--device', type=str, default=device)
-
     args = parser.parse_args()
     main(args)

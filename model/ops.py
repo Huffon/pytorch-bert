@@ -29,10 +29,8 @@ class SelfAttention(nn.Module):
 
         self_attention = torch.bmm(q, k.permute(0, 2, 1))
         self_attention = self_attention / self.scale_factor
+        self_attention = self_attention.masked_fill(mask, -np.inf)
         # self_attention = [batch size, sentence length, sentence length]
-
-        if mask is not None:
-            self_attention = self_attention.masked_fill(mask, -np.inf)
 
         attention_score = F.softmax(self_attention, dim=-1)
         attention_score = self.dropout(attention_score)
@@ -44,6 +42,9 @@ class SelfAttention(nn.Module):
 
 
 def gelu(x):
+    """
+    Hugging face's GELU implementation
+    """
     return x * 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
 
 
@@ -54,4 +55,4 @@ def build_attn_mask(input_ids):
     # input_ids = [batch size, sentence length]
     sent_len = input_ids.shape[1]
     attn_mask = (input_ids == 0).unsqueeze(1)
-    return attn_mask.repeat(1, sent_len, 1)  # [bsz, sentence length, sentence length]
+    return attn_mask.repeat(1, sent_len, 1)  # [batch size, sentence length, sentence length]

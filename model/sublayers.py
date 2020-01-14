@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from model.ops import gelu, SelfAttention
 
@@ -23,12 +22,11 @@ class Embedding(nn.Module):
         
         pos = torch.arange(sent_len, dtype=torch.long).to(self.params.device)
         # pos = [sentence length]: (0 ~ sentence length-1)
-        
         pos = pos.repeat(bsz, 1)
         # pos = [batch size, sentence length]
 
-        embed = self.tok_embedding(input_ids) + self.pos_embedding(pos) + self.seg_embedding(segment_ids)
-        return self.dropout(self.layer_norm(embed))
+        embedding = self.tok_embedding(input_ids) + self.pos_embedding(pos) + self.seg_embedding(segment_ids)
+        return self.dropout(self.layer_norm(embedding))
 
 
 class EncoderLayer(nn.Module):
@@ -42,6 +40,7 @@ class EncoderLayer(nn.Module):
 
     def forward(self, input_ids, attn_mask):
         # input_ids = [batch size, sentence length, hidden dim]
+        # attn_mask = [batch size, sentence length, sentence length]
         output = self.layer_norm1(input_ids + self.self_attention(input_ids, input_ids, input_ids, attn_mask))
         output = self.layer_norm2(output + self.position_wise_ffn(output))
         return output
@@ -55,7 +54,7 @@ class MultiHeadAttention(nn.Module):
         self.o_w = nn.Linear(params.hidden_dim, params.hidden_dim, bias=False)
         self.dropout = nn.Dropout(params.dropout)
 
-    def forward(self, query, key, value, mask=None):
+    def forward(self, query, key, value, mask):
         # query, key, value = [batch size, sentence length, hidden dim]
 
         weighted_v = [attention(query, key, value, mask) for attention in self.attentions]
