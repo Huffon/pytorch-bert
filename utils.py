@@ -4,6 +4,8 @@ from random import randrange, shuffle, random
 
 import torch
 
+random.seed(32)
+
 
 def build_iter(params, mode='train'):
     """
@@ -104,10 +106,10 @@ def replace_token(input_ids, vocab, n_pred):
     for pos in masking_cands[:n_pred]:
         masked_pos.append(pos)
         masked_tokens.append(input_ids[pos])
-        
+
         if random() < 0.8:    # 80%: [MASK] replacement
             input_ids[pos] = vocab['[MASK]']
-        elif random() < 0.5:  # 20% * 50% = 10%: random token replacement
+        elif random() < 0.5:  # 20% x 50% = 10%: random token replacement
             idx = randrange(len(vocab))
             input_ids[pos] = vocab[idx_vocab[idx]]
 

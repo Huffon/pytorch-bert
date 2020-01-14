@@ -28,8 +28,10 @@ python main.py \
 ## TODO
 
 - Finish `build_iter` and `make_instance` logic
+- Add fine-tuning logic
+- Apply **WordPiece** tokenization
 
-## Reference
+## References
 
 - [pytorchic-bert](https://github.com/dhlee347/pytorchic-bert)
 - [nlp-tutorial](https://github.com/graykode/nlp-tutorial)

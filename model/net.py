@@ -40,9 +40,9 @@ class BERT(nn.Module):
         # cls_tokens   = [batch size, hidden dim]
         cls_logits = self.classifier(cls_tokens)
         # cls_logits   = [batch size, 2]
-
-        # Expand maksed pos hidden dimenstion times to match dimension
-        masked_pos = masked_pos[:, :, None].expand(-1, -1, output.size(-1))
+        
+        # Repeat maksed pos 'hidden dimension' times to match dimension with output
+        masked_pos = masked_pos.unsqueeze(2).repeat(1, 1, output.size(-1))
         # masked_pos   = [batch size, max pred, hidden dim]
 
         # Extract masked tokens from final output sentence representation
