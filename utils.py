@@ -4,8 +4,6 @@ from random import randrange, shuffle, random
 
 import torch
 
-torch.manual_seed(32)
-
 
 def build_iter(params, mode='train'):
     """
@@ -39,7 +37,10 @@ def build_iter(params, mode='train'):
         f_vocab = open('vocab.json')
         vocab = json.load(f_vocab)
 
-        return make_instance(corpus, vocab, params)
+        for idx, line in enumerate(lines):
+            lines[idx] = [vocab[w] for w in line.split()]
+
+        return make_instance(lines, vocab, params)
 
 
 def make_instance(corpus, vocab, params):
@@ -50,62 +51,73 @@ def make_instance(corpus, vocab, params):
     positive = negative = 0
 
     while positive != params.bsz/2 or negative != params.bsz/2:
+        # Select random sentences from sentence list
         sent_a_idx, sent_b_idx = randrange(len(corpus)), randrange(len(corpus))
         sent_a, sent_b = corpus[sent_a_idx], corpus[sent_b_idx]
         
-        sentence = [vocab['[CLS]']] + sent_a + [vocab['[SEP]']] + sent_b + [vocab['[SEP]']]
-        segments = [0] * (len(sent_a) + 2) + [1] * (len(sent_b) + 1)  # [CLS], [SEP], [SEP]
+        # Concatenate randomly selected two sentences with [CLS] and [SEP] token
+        input_ids = [vocab['[CLS]']] + sent_a + [vocab['[SEP]']] + sent_b + [vocab['[SEP]']]
+        segment_ids = [0] * (len(sent_a) + 2) + [1] * (len(sent_b) + 1)  # ([CLS], [SEP]), [SEP]
 
-        n_pred = min(max(1, int(round(len(sentence) * 0.15))), 5)
+        # Calculate the number of tokens to be masked
+        n_pred = min(max(1, int(round(len(input_ids) * 0.15))), params.max_pred)
 
-        masked_sent, masked_idx = masked_lm(sentence, vocab, n_pred)
-        padded_sent, padded_segments = zero_pad(masked_sent, segments, 30)
+        # Conduct token replacement and zero padding
+        masked_tokens, masked_pos = replace_token(input_ids, vocab, n_pred)
+        padded_input_ids, padded_segment_ids = zero_pad(input_ids, segment_ids, params.max_len)
 
+        # If max_pred is larger than n_pred, add padding tokens to masked_tokens and masked_pos
         if params.max_pred > n_pred:
-            more_pad = 5 - n_pred
-            masked_sent.extend([0] * more_pad)
-            masked_idx.extend([0] * more_pad)
+            more_pad = params.max_pred - n_pred
+            masked_tokens.extend([0] * more_pad)
+            masked_pos.extend([0] * more_pad)
             
         if sent_a_idx + 1 == sent_b_idx and positive < params.bsz/2:
-            batch.append([padded_sent, padded_segments, masked_sent, masked_idx, True])
+            batch.append([padded_input_ids, padded_segment_ids, masked_tokens, masked_pos, True])
             positive += 1
         elif sent_a_idx + 1 != sent_b_idx and negative < params.bsz/2:
-            batch.append([padded_sent, padded_segments, masked_sent, masked_idx, False])
+            batch.append([padded_input_ids, padded_segment_ids, masked_tokens, masked_pos, False])
             negative += 1
-    
+
+    input_ids, segment_ids, masked_tokens, masked_pos, isNext = zip(*batch)
+    input_ids, segment_ids, masked_tokens, masked_pos, isNext = \
+        torch.LongTensor(input_ids).to(params.device), torch.LongTensor(segment_ids).to(params.device), \
+            torch.LongTensor(masked_tokens).to(params.device), torch.LongTensor(masked_pos).to(params.device), torch.LongTensor(isNext).to(params.device)
+    batch = [input_ids, segment_ids, masked_tokens, masked_pos, isNext]
+
     return batch
 
 
-def masked_lm(sentence, vocab, n_pred):
+def replace_token(input_ids, vocab, n_pred):
     """
     Replace random tokens in sentence with [MASK] or other random tokens
     """
     idx_vocab = {i: w for i, w in enumerate(vocab)}
     
     # Minimum: 15% tokens of sentence, Maximum: params.max_predict
-    masking_cand = [idx for idx, w in enumerate(sentence)
+    masking_cands = [idx for idx, w in enumerate(input_ids)
                     if w != vocab['[CLS]'] and w != vocab['[SEP]']]
-    shuffle(masking_cand)
+    shuffle(masking_cands)
 
-    masked_tokens, masked_idx = [], []
-    for idx in masking_cand[:n_pred]:
-        masked_idx.append(idx)
-        masked_tokens.append(sentence[idx])
+    masked_tokens, masked_pos = [], []
+    for pos in masking_cands[:n_pred]:
+        masked_pos.append(pos)
+        masked_tokens.append(input_ids[pos])
         
-        if random() < 0.8:  # 80%
-            sentence[idx] = vocab['[MASK]']
-        elif random() < 0.5:  # 20% * 50% = 10%
-            i = randrange(len(vocab))
-            sentence[idx] = vocab[idx_vocab[i]]
+        if random() < 0.8:    # 80%: [MASK] replacement
+            input_ids[pos] = vocab['[MASK]']
+        elif random() < 0.5:  # 20% * 50% = 10%: random token replacement
+            idx = randrange(len(vocab))
+            input_ids[pos] = vocab[idx_vocab[idx]]
 
-    return sentence, masked_idx
+    return masked_tokens, masked_pos
 
 
-def zero_pad(x, segments, max_len):
+def zero_pad(input_ids, segment_ids, max_len):
     """
-    Add zero padding tokens to input sentence
+    Add zero padding tokens to input sentence and segment
     """
-    n_pad_tokens = max_len - len(x)
-    x.extend([0] * n_pad_tokens)
-    segments.extend([0] * n_pad_tokens)
-    return x, segments
+    n_pad_tokens = max_len - len(input_ids)
+    input_ids.extend([0] * n_pad_tokens)
+    segment_ids.extend([0] * n_pad_tokens)
+    return input_ids, segment_ids

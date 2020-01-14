@@ -8,23 +8,24 @@ from model.ops import gelu, SelfAttention
 class Embedding(nn.Module):
     def __init__(self, params):
         super(Embedding, self).__init__()
-        self.tok_embedding = nn.Embedding(params.vocab_size, params.hidden_dim)
+        self.params = params
+        self.tok_embedding = nn.Embedding(params.vocab_size, params.hidden_dim, padding_idx=0)
         self.pos_embedding = nn.Embedding(params.max_len, params.hidden_dim)
         self.seg_embedding = nn.Embedding(params.num_segments, params.hidden_dim)
         self.layer_norm = nn.LayerNorm(params.hidden_dim)
 
-    def forward(self, x, seg):
-        # x = [batch size, sentence length]
-        # seg = [batch size, sentence length]
-        bsz, sent_len = x.size()
+    def forward(self, input_ids, segment_ids):
+        # input_ids   = [batch size, sentence length]
+        # segment_ids = [batch size, sentence length]
+        bsz, sent_len = input_ids.size()
         
-        position = torch.arange(sent_len, dtype=torch.long)
-        # position = [sentence length]: (0 ~ sentence length-1)
+        pos = torch.arange(sent_len, dtype=torch.long).to(self.params.device)
+        # pos = [sentence length]: (0 ~ sentence length-1)
         
-        position = position.repeat(bsz, 1)
-        # position = [batch size, sentence length]
+        pos = pos.repeat(bsz, 1)
+        # pos = [batch size, sentence length]
 
-        embed = self.tok_embedding(x) + self.pos_embedding(position) + self.seg_embedding(seg)
+        embed = self.tok_embedding(input_ids) + self.pos_embedding(pos) + self.seg_embedding(segment_ids)
         return self.layer_norm(embed)
 
 
@@ -34,9 +35,9 @@ class EncoderLayer(nn.Module):
         self.self_attention = MultiHeadAttention(params)
         self.position_wise_ffn = PositionWiseFeedForward(params)
 
-    def forward(self, x, attn_mask):
-        # x = [batch size, sentence length, hidden dim]
-        output = self.self_attention(x, x, x, attn_mask)
+    def forward(self, input_ids, attn_mask):
+        # input_ids = [batch size, sentence length, hidden dim]
+        output = self.self_attention(input_ids, input_ids, input_ids, attn_mask)
         output = self.position_wise_ffn(output)
         return output
 
@@ -70,6 +71,6 @@ class PositionWiseFeedForward(nn.Module):
     
     def forward(self, x):
         # x = [batch size, sentence length, hidden dim]
-        output = self.dropout(gelu(self.ff1(x)))  # [batch size, sentence length, feed forward dim]
-        output = self.ff2(output)                 # [batch size, sentence length, hidden dim]
+        output = self.dropout(gelu(self.fc1(x)))  # [batch size, sentence length, feed forward dim]
+        output = self.fc2(output)                 # [batch size, sentence length, hidden dim]
         return self.dropout(output)

@@ -1,6 +1,8 @@
 import json
 import argparse
 
+import torch
+
 from trainer import Trainer
 from utils import build_iter
 
@@ -19,7 +21,7 @@ def main(params):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='BERT')
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'test'])
-    parser.add_argument('--num_epoch', type=int, default=3)
+    parser.add_argument('--num_epoch', type=int, default=2)
     parser.add_argument('--bsz', type=int, default=32)
 
     # Hyper-parameters
@@ -33,10 +35,12 @@ if __name__ == '__main__':
     parser.add_argument('--dropout', type=float, default=0.1)
     
     # Add pre-built vocab size to params
-    f_vocab = open('vocab.json')
-    vocab = json.load(f_vocab)
+    vocab = json.load(open('vocab.json'))
     parser.add_argument('--vocab_size', type=int, default=len(vocab))
-    f_vocab.close()
+    
+    # Add device information
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    parser.add_argument('--device', type=str, default=device)
 
     args = parser.parse_args()
     main(args)
