@@ -6,13 +6,13 @@ This repository contains unofficial [BERT](https://arxiv.org/abs/1810.04805) imp
 
 - To build vocabulary, run following code snippet
 
-```python
+```bash
 python build_vocab.py
 ```
 
 - To pretrain BERT model, run following code snippet with options
 
-```python
+```bash
 python main.py \
     --mode MODE
     --max_len MAX_LEN
