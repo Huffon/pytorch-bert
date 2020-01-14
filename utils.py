@@ -79,6 +79,7 @@ def make_instance(corpus, vocab, params):
             batch.append([padded_input_ids, padded_segment_ids, masked_tokens, masked_pos, False])
             negative += 1
 
+    # Convert each input item into tensor and store them in device
     input_ids, segment_ids, masked_tokens, masked_pos, isNext = zip(*batch)
     input_ids, segment_ids, masked_tokens, masked_pos, isNext = \
         torch.LongTensor(input_ids).to(params.device), torch.LongTensor(segment_ids).to(params.device), \

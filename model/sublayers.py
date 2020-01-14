@@ -10,9 +10,11 @@ class Embedding(nn.Module):
         super(Embedding, self).__init__()
         self.params = params
         self.tok_embedding = nn.Embedding(params.vocab_size, params.hidden_dim, padding_idx=0)
+        # self.tok_embedding = nn.Embedding(30000, params.hidden_dim, padding_idx=0)  # 110M params (orginal)
         self.pos_embedding = nn.Embedding(params.max_len, params.hidden_dim)
         self.seg_embedding = nn.Embedding(params.num_segments, params.hidden_dim)
         self.layer_norm = nn.LayerNorm(params.hidden_dim)
+        self.dropout = nn.Dropout(params.dropout)
 
     def forward(self, input_ids, segment_ids):
         # input_ids   = [batch size, sentence length]
@@ -26,19 +28,22 @@ class Embedding(nn.Module):
         # pos = [batch size, sentence length]
 
         embed = self.tok_embedding(input_ids) + self.pos_embedding(pos) + self.seg_embedding(segment_ids)
-        return self.layer_norm(embed)
+        return self.dropout(self.layer_norm(embed))
 
 
 class EncoderLayer(nn.Module):
     def __init__(self, params):
         super(EncoderLayer, self).__init__()
         self.self_attention = MultiHeadAttention(params)
+        self.layer_norm1 = nn.LayerNorm(params.hidden_dim)
         self.position_wise_ffn = PositionWiseFeedForward(params)
+        self.layer_norm2 = nn.LayerNorm(params.hidden_dim)
+        self.dropout = nn.Dropout(params.dropout)
 
     def forward(self, input_ids, attn_mask):
         # input_ids = [batch size, sentence length, hidden dim]
-        output = self.self_attention(input_ids, input_ids, input_ids, attn_mask)
-        output = self.position_wise_ffn(output)
+        output = self.layer_norm1(input_ids + self.self_attention(input_ids, input_ids, input_ids, attn_mask))
+        output = self.layer_norm2(output + self.position_wise_ffn(output))
         return output
 
 

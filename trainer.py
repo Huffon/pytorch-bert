@@ -34,7 +34,7 @@ class Trainer:
 
     def train(self):
         # print(self.model)
-        # print(f'The model has {self.model.count_params():,} trainable parameters')
+        print(f'The model has {self.model.count_params():,} trainable parameters')
         best_valid_loss = float('inf')
 
         # For presentation
