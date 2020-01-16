@@ -27,9 +27,9 @@ python main.py \
 
 ## TODO
 
-- Finish `build_iter` and `make_instance` logic
-- Add fine-tuning logic
+- Finish `build_iter` and `make_instance` logic on large dataset
 - Apply **WordPiece** tokenization
+- Add **Fine-tuning** stage
 
 ## References
 

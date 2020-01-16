@@ -66,25 +66,30 @@ def make_instance(corpus, vocab, params):
         masked_tokens, masked_pos = replace_token(input_ids, vocab, n_pred)
         padded_input_ids, padded_segment_ids = zero_pad(input_ids, segment_ids, params.max_len)
 
+        # Masking token checker used to calculate real loss
+        num_masked = [1] * len(masked_tokens)
+
         # If max_pred is larger than n_pred, add padding tokens to masked_tokens and masked_pos
         if params.max_pred > n_pred:
             more_pad = params.max_pred - n_pred
             masked_tokens.extend([0] * more_pad)
             masked_pos.extend([0] * more_pad)
+            num_masked.extend([0] * more_pad)
             
         if sent_a_idx + 1 == sent_b_idx and positive < params.bsz/2:
-            batch.append([padded_input_ids, padded_segment_ids, masked_tokens, masked_pos, True])
+            batch.append([padded_input_ids, padded_segment_ids, masked_tokens, masked_pos, num_masked, True])
             positive += 1
         elif sent_a_idx + 1 != sent_b_idx and negative < params.bsz/2:
-            batch.append([padded_input_ids, padded_segment_ids, masked_tokens, masked_pos, False])
+            batch.append([padded_input_ids, padded_segment_ids, masked_tokens, masked_pos, num_masked, False])
             negative += 1
 
     # Convert each input item into tensor and store them in device
-    input_ids, segment_ids, masked_tokens, masked_pos, isNext = zip(*batch)
-    input_ids, segment_ids, masked_tokens, masked_pos, isNext = \
+    input_ids, segment_ids, masked_tokens, masked_pos, num_masked, isNext = zip(*batch)
+    input_ids, segment_ids, masked_tokens, masked_pos, num_masked, isNext = \
         torch.LongTensor(input_ids).to(params.device), torch.LongTensor(segment_ids).to(params.device), \
-            torch.LongTensor(masked_tokens).to(params.device), torch.LongTensor(masked_pos).to(params.device), torch.LongTensor(isNext).to(params.device)
-    batch = [input_ids, segment_ids, masked_tokens, masked_pos, isNext]
+            torch.LongTensor(masked_tokens).to(params.device), torch.LongTensor(masked_pos).to(params.device), \
+                torch.LongTensor(num_masked).to(params.device), torch.LongTensor(isNext).to(params.device)
+    batch = [input_ids, segment_ids, masked_tokens, masked_pos, num_masked, isNext]
 
     return batch
 

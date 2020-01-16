@@ -35,8 +35,11 @@ class Trainer:
         )
         self.optimizer = optim.Adam(self.model.parameters())
 
-        self.criterion = nn.CrossEntropyLoss(ignore_index=0)
-        self.criterion.to(params.device)
+        self.lm_criterion = nn.CrossEntropyLoss(ignore_index=0)
+        self.lm_criterion.to(params.device)
+
+        self.cls_criterion = nn.CrossEntropyLoss()
+        self.cls_criterion.to(params.device)
 
     def train(self):
         # print(self.model)
@@ -54,18 +57,18 @@ class Trainer:
             start_time = time.time()
             
             # for batch in self.train_iter: # batchify
-            input_ids, segment_ids, masked_tokens, masked_pos, isNext = self.train_iter
+            input_ids, segment_ids, masked_tokens, masked_pos, num_masked, isNext = self.train_iter
             self.optimizer.zero_grad()
             lm_logits, cls_logits = self.model(input_ids, segment_ids, masked_pos)
             
             # Calculate losses for Masked LM
-            loss_lm = self.criterion(lm_logits.transpose(1, 2), masked_tokens)
+            loss_lm = self.lm_criterion(lm_logits.transpose(1, 2), masked_tokens)
             # lm_logits     = [batch size, vocab size, max pred]
             # masked_tokens = [batch size, max pred]
-            loss_lm = (loss_lm.float()).mean()
+            loss_lm = (loss_lm*num_masked.float()).mean()
 
             # Calculate losses for Next Sentence Prediction
-            loss_cls = self.criterion(cls_logits, isNext)
+            loss_cls = self.cls_criterion(cls_logits, isNext)
             loss = loss_lm + loss_cls
 
             # For presentation
