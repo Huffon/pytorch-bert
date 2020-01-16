@@ -33,6 +33,7 @@ if __name__ == '__main__':
     parser.add_argument('--hidden_dim', type=int, default=768)
     parser.add_argument('--ffn_dim', type=int, default=3072)
     parser.add_argument('--dropout', type=float, default=0.1)
+    parser.add_argument('--warm_steps', type=int, default=10000)
     
     # Add pre-built vocab size to params
     vocab = json.load(open('vocab.json'))

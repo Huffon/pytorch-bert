@@ -4,8 +4,6 @@ from random import randrange, shuffle, random
 
 import torch
 
-random.seed(32)
-
 
 def build_iter(params, mode='train'):
     """

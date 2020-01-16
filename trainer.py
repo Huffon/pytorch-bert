@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from model.net import BERT
+from model.optim import ScheduledAdam
 
 random.seed(32)
 torch.manual_seed(32)
@@ -27,6 +28,11 @@ class Trainer:
         self.model = BERT(self.params)
         self.model.to(params.device)
 
+        self.optimizer = ScheduledAdam(
+            optimzer=optim.Adam(self.model.parameters(), betas=(0.9, 0.999)),
+            hidden_dim=params.hidden_dim,
+            warm_steps=params.warm_steps
+        )
         self.optimizer = optim.Adam(self.model.parameters())
 
         self.criterion = nn.CrossEntropyLoss(ignore_index=0)
